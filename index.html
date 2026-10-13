@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>SpaceAI</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs/qrcode.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#0a0a0c;--panel:#141418;--panel2:#1c1c22;
+  --border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.12);
+  --text:#e8e8ec;--muted:#7a7a85;--muted2:#9a9aa5;--accent:#ffffff;--danger:#ff4444;
+  --glow:0 0 60px rgba(255,255,255,0.15);
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;overflow:hidden;user-select:none}
+#app{height:100vh;height:100dvh;display:flex;flex-direction:column;position:relative}
+.screen{position:absolute;inset:0;display:flex;flex-direction:column;padding:20px;opacity:0;pointer-events:none;transition:opacity .35s ease,transform .35s ease;transform:translateY(12px);overflow-y:auto;-webkit-overflow-scrolling:touch}
+.screen.active{opacity:1;pointer-events:auto;transform:translateY(0)}
+.screen::-webkit-scrollbar{width:0}
+.hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-shrink:0}
+.hdr-btn{display:flex;align-items:center;gap:6px;padding:8px 14px;background:var(--panel);border:1px solid var(--border);border-radius:12px;color:var(--muted2);font-size:13px;font-weight:600;cursor:pointer;transition:.2s}
+.hdr-btn:hover{background:var(--panel2);color:#fff}
+.hdr-btn:active{transform:scale(.96)}
+.hdr-btn svg{width:16px;height:16px}
+#s-welcome{align-items:center;justify-content:center;text-align:center;padding:32px}
+.logo-bolt{width:120px;height:120px;filter:drop-shadow(0 0 40px rgba(255,255,255,0.35));animation:float 3s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.buy-btn{margin-top:40px;padding:18px 56px;background:var(--accent);color:#0a0a0c;font-size:17px;font-weight:700;letter-spacing:.02em;border:none;border-radius:16px;cursor:pointer;box-shadow:var(--glow);transition:.25s}
+.buy-btn:hover{transform:translateY(-2px);box-shadow:0 0 80px rgba(255,255,255,0.25)}
+.buy-btn:active{transform:scale(.97)}
+.title{font-size:24px;font-weight:700;letter-spacing:-.02em;margin-bottom:6px}
+.subtitle{font-size:13px;color:var(--muted);margin-bottom:24px}
+.cards{display:flex;flex-direction:column;gap:14px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:20px;padding:20px;transition:.25s;position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at top right,rgba(255,255,255,0.04),transparent 60%);pointer-events:none}
+.card:hover{border-color:var(--border2);transform:translateY(-2px)}
+.card-head{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.card-icon{width:48px;height:48px;border-radius:14px;background:var(--panel2);display:flex;align-items:center;justify-content:center;padding:10px;flex-shrink:0}
+.card-icon img{width:100%;height:100%;object-fit:contain}
+.card-icon.claude{background:#1e1410}
+.card-name{font-size:17px;font-weight:700;letter-spacing:-.01em}
+.card-desc{font-size:12px;color:var(--muted);margin-top:2px}
+.card-tag{display:inline-block;padding:4px 10px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2);margin-bottom:12px}
+.card-price{font-size:32px;font-weight:800;letter-spacing:-.03em;margin-bottom:16px}
+.card-price span{font-size:14px;font-weight:500;color:var(--muted)}
+.features{list-style:none;margin-bottom:18px}
+.features li{font-size:13px;color:var(--muted2);padding:5px 0 5px 20px;position:relative;line-height:1.4}
+.features li::before{content:'';position:absolute;left:0;top:12px;width:6px;height:6px;border-radius:50%;background:var(--muted)}
+.card-btn{width:100%;padding:15px;background:var(--accent);color:#0a0a0c;font-size:14px;font-weight:700;border:none;border-radius:14px;cursor:pointer;transition:.2s;letter-spacing:.02em}
+.card-btn:hover{background:#f0f0f0}
+.card-btn:active{transform:scale(.97)}
+.pay-head{text-align:center;margin-bottom:24px}
+.pay-title{font-size:22px;font-weight:700;letter-spacing:-.02em;margin-bottom:4px}
+.pay-sub{font-size:13px;color:var(--muted)}
+.amount-box{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.amount-label{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.amount-val{font-size:26px;font-weight:800;letter-spacing:-.02em}
+.qr-box{background:#fff;padding:16px;border-radius:20px;margin:0 auto 16px;width:fit-content;box-shadow:0 0 40px rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;min-width:252px;min-height:252px}
+.qr-box img,.qr-box canvas{display:block;border-radius:8px}
+.qr-hint{text-align:center;font-size:12px;color:var(--muted);margin-bottom:20px}
+.field-label{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.wallet-row{display:flex;gap:8px;margin-bottom:20px}
+.wallet-inp{flex:1;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:13px 14px;color:var(--text);font-size:12px;font-family:ui-monospace,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.copy-btn{padding:13px 16px;background:var(--panel2);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;transition:.2s;white-space:nowrap}
+.copy-btn:hover{background:#25252c}
+.copy-btn:active{transform:scale(.95)}
+.copy-btn.ok{background:#1a3a1a;color:#6f6;border-color:#2a5a2a}
+.contact-inp{width:100%;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px 16px;color:var(--text);font-size:14px;outline:none;transition:.2s;margin-bottom:10px}
+.contact-inp:focus{border-color:var(--border2);background:var(--panel2)}
+.contact-inp::placeholder{color:#555}
+.contact-inp.err{border-color:var(--danger)}
+.warning{font-size:12px;color:var(--danger);line-height:1.4;margin-bottom:20px;font-weight:600}
+.pay-btn{width:100%;padding:17px;background:var(--accent);color:#0a0a0c;font-size:15px;font-weight:800;border:none;border-radius:16px;cursor:pointer;letter-spacing:.06em;text-transform:uppercase;transition:.2s;box-shadow:var(--glow)}
+.pay-btn:hover{background:#f0f0f0}
+.pay-btn:active{transform:scale(.97)}
+.pay-btn:disabled{opacity:.5;cursor:not-allowed}
+.pay-note{text-align:center;font-size:11px;color:var(--muted);margin-top:14px;line-height:1.5}
+#s-success{align-items:center;justify-content:center;text-align:center;padding:32px}
+.check{width:80px;height:80px;border-radius:50%;border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;margin-bottom:24px;box-shadow:var(--glow);animation:pop .4s ease}
+@keyframes pop{0%{transform:scale(0)}70%{transform:scale(1.1)}100%{transform:scale(1)}}
+.check svg{width:36px;height:36px;stroke:#fff;stroke-width:2.5;fill:none}
+.success-title{font-size:32px;font-weight:800;letter-spacing:-.03em;margin-bottom:12px}
+.success-sub{font-size:13px;color:var(--muted);line-height:1.6;max-width:320px;margin-bottom:8px}
+.success-contact{font-size:12px;color:var(--muted2);margin-bottom:24px}
+.success-contact b{color:#fff}
+.details-btn{padding:10px 18px;background:transparent;border:1px solid var(--border2);border-radius:12px;color:var(--text);font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;transition:.2s;margin-bottom:32px}
+.details-btn:hover{background:var(--panel2)}
+.details-btn:active{transform:scale(.96)}
+.back-btn{padding:16px 32px;background:var(--accent);color:#0a0a0c;font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;border:none;border-radius:14px;cursor:pointer;transition:.2s}
+.back-btn:active{transform:scale(.97)}
+.receipt{background:var(--panel);border:1px solid var(--border);border-radius:20px;padding:24px;margin-bottom:16px}
+.receipt-top{text-align:center;padding-bottom:20px;border-bottom:1px dashed var(--border2);margin-bottom:20px}
+.receipt-badge{display:inline-block;padding:6px 14px;background:var(--panel2);border:1px solid var(--border);border-radius:10px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2);margin-bottom:16px}
+.receipt-row{display:flex;justify-content:space-between;align-items:flex-start;padding:9px 0;gap:16px;font-size:13px}
+.receipt-row .k{color:var(--muted);flex-shrink:0}
+.receipt-row .v{color:#fff;font-weight:600;text-align:right;word-break:break-word}
+.receipt-total{display:flex;justify-content:space-between;align-items:center;padding-top:18px;margin-top:14px;border-top:1px dashed var(--border2)}
+.receipt-total .k{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.receipt-total .v{font-size:30px;font-weight:800;letter-spacing:-.02em}
+.receipt-note{background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:14px;font-size:12px;color:var(--muted2);line-height:1.5;margin-bottom:20px}
+.receipt-note b{color:#fff}
+.receipt-actions{display:flex;gap:10px}
+.receipt-actions button{flex:1;padding:15px;border-radius:14px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;transition:.2s;border:1px solid var(--border2)}
+.btn-ghost{background:transparent;color:var(--text)}
+.btn-ghost:hover{background:var(--panel2)}
+.btn-solid{background:var(--accent);color:#0a0a0c;border-color:var(--accent)}
+.btn-solid:hover{background:#f0f0f0}
+.receipt-actions button:active{transform:scale(.97)}
+.hist-item{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:10px;cursor:pointer;transition:.2s;display:flex;justify-content:space-between;align-items:center}
+.hist-item:hover{background:var(--panel2);border-color:var(--border2)}
+.hist-item:active{transform:scale(.98)}
+.hist-info{display:flex;flex-direction:column;gap:3px;min-width:0}
+.hist-name{font-size:14px;font-weight:700;color:#fff}
+.hist-num{font-size:11px;color:var(--muted);font-family:ui-monospace,monospace}
+.hist-price{font-size:16px;font-weight:800;color:#fff;flex-shrink:0}
+.empty{text-align:center;padding:60px 20px;color:var(--muted);font-size:13px}
+.back-hdr{display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-shrink:0}
+.back-hdr button{background:var(--panel);border:1px solid var(--border);border-radius:10px;width:38px;height:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.2s}
+.back-hdr button:hover{background:var(--panel2)}
+.back-hdr button:active{transform:scale(.94)}
+.back-hdr svg{width:18px;height:18px;stroke:var(--text);stroke-width:2;fill:none}
+.back-hdr h2{font-size:18px;font-weight:700}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div class="screen active" id="s-welcome">
+    <svg class="logo-bolt" viewBox="0 0 100 200" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#ffffff"/>
+          <stop offset="100%" stop-color="#888888"/>
+        </linearGradient>
+      </defs>
+      <path d="M 60 0 L 10 110 L 45 110 L 30 200 L 90 85 L 55 85 Z" fill="url(#g1)" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+    </svg>
+    <button class="buy-btn" onclick="go('s-catalog')">Buy</button>
+  </div>
+
+  <div class="screen" id="s-catalog">
+    <div class="hdr">
+      <button class="hdr-btn" onclick="openHistory()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        История
+      </button>
+    </div>
+    <div class="title">Наши подписки</div>
+    <div class="subtitle">Только помесячно · моментальная выдача</div>
+
+    <div class="cards">
+      <div class="card">
+        <div class="card-head">
+          <div class="card-icon"><img src="https://upload.wikimedia.org/wikipedia/commons/0/04/ChatGPT_logo.svg" alt="ChatGPT"></div>
+          <div>
+            <div class="card-name">ChatGPT Plus</div>
+            <div class="card-desc">OpenAI · для работы и творчества</div>
+          </div>
+        </div>
+        <div class="card-tag">Хит продаж</div>
+        <div class="card-price">$24.99<span>/мес</span></div>
+        <ul class="features">
+          <li>GPT-4o без ограничений</li>
+          <li>GPT-4o mini и GPT-4 Turbo</li>
+          <li>Голосовой режим и распознавание картинок</li>
+          <li>Генерация изображений (DALL·E 3)</li>
+          <li>Доступ к GPTs и плагинам</li>
+        </ul>
+        <button class="card-btn" onclick="selectPlan('ChatGPT Plus', 24.99)">Купить</button>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div class="card-icon claude"><img src="https://upload.wikimedia.org/wikipedia/commons/7/78/Anthropic_logo.svg" alt="Claude"></div>
+          <div>
+            <div class="card-name">Claude Pro</div>
+            <div class="card-desc">Anthropic · для кода и аналитики</div>
+          </div>
+        </div>
+        <div class="card-tag">Для работы</div>
+        <div class="card-price">$24.99<span>/мес</span></div>
+        <ul class="features">
+          <li>Claude 3.5 Sonnet и Opus</li>
+          <li>Контекст до 200 000 токенов</li>
+          <li>В 5 раз больше сообщений</li>
+          <li>Загрузка файлов и PDF</li>
+          <li>Приоритетный доступ в часы пик</li>
+        </ul>
+        <button class="card-btn" onclick="selectPlan('Claude Pro', 24.99)">Купить</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen" id="s-payment">
+    <div class="hdr">
+      <button class="hdr-btn" onclick="go('s-catalog')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Назад
+      </button>
+    </div>
+    <div class="pay-head">
+      <div class="pay-title">Оплата подписки</div>
+      <div class="pay-sub" id="pay-plan">ChatGPT Plus</div>
+    </div>
+
+    <div class="amount-box">
+      <div class="amount-label">Сумма к оплате</div>
+      <div class="amount-val" id="pay-amount">$24.99</div>
+    </div>
+
+    <div class="qr-box" id="qr-box"></div>
+    <div class="qr-hint">Отсканируй QR-код в приложении кошелька</div>
+
+    <div class="field-label">Адрес кошелька (USDT TRC-20)</div>
+    <div class="wallet-row">
+      <div class="wallet-inp">TKT8cheX3vAcSQfGfVvx5TqzaTFv7QBe2c</div>
+      <button class="copy-btn" id="copyBtn" onclick="copyWallet()">Копировать</button>
+    </div>
+
+    <div class="field-label">Email или @username</div>
+    <input type="text" class="contact-inp" id="contact" placeholder="your@email.com или @username" autocomplete="off">
+
+    <div class="warning">⚠️ Логин и пароль от аккаунта придут вам на указанный контакт ⚠️</div>
+
+    <button class="pay-btn" id="payBtn" onclick="submitOrder()">Я оплатил</button>
+    <div class="pay-note">После оплаты нажми «Я оплатил» — мы получим уведомление и свяжемся с тобой в течение 5 минут.</div>
+  </div>
+
+  <div class="screen" id="s-success">
+    <div class="check">
+      <svg viewBox="0 0 24 24"><polyline points="4 12 10 18 20 6"/></svg>
+    </div>
+    <div class="success-title">Заказ в пути!</div>
+    <div class="success-sub">Мы получили твой заказ. Проверяем поступление оплаты — обычно это занимает не больше 5 минут.</div>
+    <div class="success-contact">Уведомление придёт на <b id="success-contact">your@email.com</b></div>
+    <button class="details-btn" onclick="showReceipt()">Подробности →</button>
+    <button class="back-btn" onclick="go('s-welcome')">Вернуться на сайт</button>
+  </div>
+
+  <div class="screen" id="s-receipt">
+    <div class="receipt">
+      <div class="receipt-top">
+        <div class="receipt-badge">● Заказ в пути</div>
+      </div>
+      <div class="receipt-row"><span class="k">Номер заказа</span><span class="v" id="rc-num">—</span></div>
+      <div class="receipt-row"><span class="k">Дата и время</span><span class="v" id="rc-date">—</span></div>
+      <div class="receipt-row"><span class="k">Подписка</span><span class="v" id="rc-plan">—</span></div>
+      <div class="receipt-row"><span class="k">Срок</span><span class="v">1 месяц</span></div>
+      <div class="receipt-row"><span class="k">Контакт</span><span class="v" id="rc-contact">—</span></div>
+      <div class="receipt-row"><span class="k">Способ оплаты</span><span class="v">USDT (TRC-20)</span></div>
+      <div class="receipt-row"><span class="k">Кошелёк получателя</span><span class="v" style="font-family:ui-monospace,monospace;font-size:11px">TKT8cheX3vAcSQfGfVvx5TqzaTFv7QBe2c</span></div>
+      <div class="receipt-total">
+        <span class="k">Итого</span>
+        <span class="v" id="rc-total">$24.99</span>
+      </div>
+    </div>
+    <div class="receipt-note">Оплата проверяется вручную. Обычно это занимает <b>до 5 минут</b>. Если что-то пошло не так — напиши нам в Telegram.</div>
+    <div class="receipt-actions">
+      <button class="btn-ghost" onclick="go('s-catalog')">← Назад</button>
+      <button class="btn-solid" onclick="window.open('https://t.me/efuea','_blank')">Написать в Telegram</button>
+    </div>
+  </div>
+
+  <div class="screen" id="s-history">
+    <div class="back-hdr">
+      <button onclick="go('s-catalog')"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
+      <h2>История покупок</h2>
+    </div>
+    <div id="history-list"></div>
+  </div>
+
+</div>
+
+<script>
+const TG_TOKEN = '8628853125:AAEswAx-jq7o-HFfmB9GLG3JLbBCKEXhUVs';
+const TG_CHAT = '8900949488';
+const WALLET = 'TKT8cheX3vAcSQfGfVvx5TqzaTFv7QBe2c';
+
+let plan = { name: 'ChatGPT Plus', price: 24.99 };
+
+const tg = window.Telegram?.WebApp;
+if (tg) { tg.ready(); tg.expand(); }
+
+function go(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function selectPlan(name, price) {
+  plan = { name, price };
+  document.getElementById('pay-plan').textContent = name;
+  document.getElementById('pay-amount').textContent = '$' + price.toFixed(2);
+  go('s-payment');
+  setTimeout(genQR, 100);
+}
+
+function genQR() {
+  const box = document.getElementById('qr-box');
+  box.innerHTML = '';
+  const div = document.createElement('div');
+  box.appendChild(div);
+  try {
+    new QRCode(div, {
+      text: `tron:${WALLET}?amount=${plan.price}`,
+      width: 220,
+      height: 220,
+      colorDark: '#000000',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  } catch(e) {
+    box.innerHTML = '<div style="color:#000;font-size:12px;padding:20px;text-align:center">QR недоступен</div>';
+  }
+}
+
+function copyWallet() {
+  navigator.clipboard.writeText(WALLET).then(() => {
+    const b = document.getElementById('copyBtn');
+    b.textContent = 'Скопировано';
+    b.classList.add('ok');
+    setTimeout(() => { b.textContent = 'Копировать'; b.classList.remove('ok'); }, 1800);
+  });
+}
+
+function genOrderNum() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ0123456789';
+  const rand = n => Array.from({length: n}, () => chars[Math.floor(Math.random()*chars.length)]).join('');
+  return `SSC-${rand(6)}-${rand(4)}`;
+}
+
+function nowStr() {
+  const d = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  return `${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()} в ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+async function submitOrder() {
+  const contactInp = document.getElementById('contact');
+  const contact = contactInp.value.trim();
+  const btn = document.getElementById('payBtn');
+
+  const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact);
+  const isTg = /^@[a-zA-Z0-9_]{3,32}$/.test(contact);
+
+  if (!contact || (!isEmail && !isTg)) {
+    contactInp.classList.add('err');
+    contactInp.focus();
+    return;
+  }
+  contactInp.classList.remove('err');
+
+  btn.disabled = true;
+  btn.textContent = 'Отправляем...';
+
+  const orderNum = genOrderNum();
+  const dateStr = nowStr();
+
+  const order = {
+    num: orderNum,
+    plan: plan.name,
+    price: plan.price,
+    contact: contact,
+    date: dateStr,
+    wallet: WALLET
+  };
+
+  const text =
+`🔔 НОВЫЙ ЗАКАЗ
+
+📋 Заказ №: ${orderNum}
+📦 Подписка: ${plan.name}
+💰 Сумма: $${plan.price.toFixed(2)}
+📧 Контакт: ${contact}
+🕐 Время: ${dateStr}
+🌐 Источник: Mini App SpaceAI
+
+⚠️ Проверь поступление USDT на кошелёк:
+${WALLET}
+
+➡️ Свяжись с клиентом для выдачи доступа.`;
+
+  try {
+    await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: TG_CHAT, text: text })
+    });
+  } catch(e) { console.error(e); }
+
+  const hist = JSON.parse(localStorage.getItem('spaceai_orders') || '[]');
+  hist.unshift(order);
+  localStorage.setItem('spaceai_orders', JSON.stringify(hist));
+  localStorage.setItem('spaceai_last', JSON.stringify(order));
+
+  document.getElementById('success-contact').textContent = contact;
+
+  btn.disabled = false;
+  btn.textContent = 'Я оплатил';
+  go('s-success');
+}
+
+function showReceipt() {
+  const o = JSON.parse(localStorage.getItem('spaceai_last') || 'null');
+  if (!o) { go('s-catalog'); return; }
+  document.getElementById('rc-num').textContent = o.num;
+  document.getElementById('rc-date').textContent = o.date;
+  document.getElementById('rc-plan').textContent = o.plan;
+  document.getElementById('rc-contact').textContent = o.contact;
+  document.getElementById('rc-total').textContent = '$' + o.price.toFixed(2);
+  go('s-receipt');
+}
+
+function openHistory() {
+  const hist = JSON.parse(localStorage.getItem('spaceai_orders') || '[]');
+  const list = document.getElementById('history-list');
+  if (!hist.length) {
+    list.innerHTML = '<div class="empty">У тебя пока нет заказов</div>';
+  } else {
+    list.innerHTML = hist.map((o, i) => `
+      <div class="hist-item" onclick="openHistItem(${i})">
+        <div class="hist-info">
+          <div class="hist-name">${o.plan}</div>
+          <div class="hist-num">${o.num}</div>
+        </div>
+        <div class="hist-price">$${o.price.toFixed(2)}</div>
+      </div>
+    `).join('');
+  }
+  go('s-history');
+}
+
+function openHistItem(i) {
+  const hist = JSON.parse(localStorage.getItem('spaceai_orders') || '[]');
+  const o = hist[i];
+  if (!o) return;
+  document.getElementById('rc-num').textContent = o.num;
+  document.getElementById('rc-date').textContent = o.date;
+  document.getElementById('rc-plan').textContent = o.plan;
+  document.getElementById('rc-contact').textContent = o.contact;
+  document.getElementById('rc-total').textContent = '$' + o.price.toFixed(2);
+  go('s-receipt');
+}
+</script>
+</body>
+</html>
